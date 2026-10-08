@@ -1,3 +1,9 @@
+<!--
+SPDX-FileCopyrightText: 2022 The P4 Language Consortium
+
+SPDX-License-Identifier: Apache-2.0
+-->
+
 # Comparing the specification `grammar.mdk` file against `p4c`'s grammar
 
 Assuming you have a local copy of a clone of the p4lang/p4c repository
@@ -6,5 +12,5 @@ directory to compare the spec's grammar.mdk file against that p4c
 repo's version of the grammar:
 
 ```bash
-./compare-grammar.sh ../grammar.mdk $HOME/p4c/frontends/parsers/p4/p4parser.ypp
+./compare-grammar.sh ../grammar.adoc $HOME/p4c/frontends/parsers/p4/p4parser.ypp
 ```

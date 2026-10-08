@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: 2016 P4 Language Consortium
+//
+// SPDX-License-Identifier: Apache-2.0
+
 // tag::p4program[]
 p4program
     : /* empty */
@@ -81,6 +85,13 @@ annotation
     | "@" name "[" structuredAnnotationBody "]"
     ;
 // end::annotation[]
+
+// tag::structuredAnnotationBody[]
+structuredAnnotationBody
+    : expressionList optTrailingComma
+    | kvList optTrailingComma
+    ;
+// end::structuredAnnotationBody[]
 
 // tag::annotationBody[]
 annotationBody
@@ -494,10 +505,13 @@ functionPrototype
     ;
 // end::functionPrototype[]
 
+// tag::methodPrototype[]
 methodPrototype
     : optAnnotations functionPrototype ";"
+    | optAnnotations ABSTRACT functionPrototype ";"
     | optAnnotations TYPE_IDENTIFIER "(" parameterList ")" ";"
     ;
+// end::methodPrototype[]
 
 /************************** TYPES ****************************/
 
@@ -506,7 +520,7 @@ typeRef
     : baseType
     | typeName
     | specializedType
-    | headerStackType
+    | arrayType
     | p4listType
     | tupleType
     ;
@@ -544,12 +558,11 @@ tupleType
     ;
 // end::tupleType[]
 
-// tag::headerStackType[]
-headerStackType
-    : typeName "[" expression "]"
-    | specializedType "[" expression "]"
+// tag::arrayType[]
+arrayType
+    : typeRef "[" expression "]"
     ;
-// end::headerStackType[]
+// end::arrayType[]
 
 // tag::specializedType[]
 specializedType
@@ -734,23 +747,29 @@ typedefDeclaration
 
 // tag::assignmentOrMethodCallStatement[]
 assignmentOrMethodCallStatement
-    : lvalue "(" argumentList ")" ";"
-    | lvalue "<" typeArgumentList ">" "(" argumentList ")" ";"
-    | lvalue "="  expression ";"
+    : assignmentOrMethodCallStatementWithoutSemicolon ";"
     ;
 // end::assignmentOrMethodCallStatement[]
 
-// tag::breakStatement[]
-breakStatement
-    : BREAK ";"
+// tag::assignmentOrMethodCallStatementWithoutSemicolon[]
+assignmentOrMethodCallStatementWithoutSemicolon
+    : lvalue "(" argumentList ")"
+    | lvalue "<" typeArgumentList ">" "(" argumentList ")"
+    | lvalue "="  expression
+    | lvalue "*=" expression
+    | lvalue "/=" expression
+    | lvalue "%=" expression
+    | lvalue "+=" expression
+    | lvalue "-=" expression
+    | lvalue "|+|=" expression
+    | lvalue "|-|=" expression
+    | lvalue "<<=" expression
+    | lvalue ">>=" expression
+    | lvalue "&=" expression
+    | lvalue "|=" expression
+    | lvalue "^=" expression
     ;
-// end::breakStatement[]
-
-// tag::continueStatement[]
-continueStatement
-    : CONTINUE ";"
-    ;
-// end::continueStatement[]
+// end::assignmentOrMethodCallStatementWithoutSemicolon[]
 
 // tag::emptyStatement[]
 emptyStatement
@@ -778,6 +797,18 @@ conditionalStatement
     ;
 // end::conditionalStatement[]
 
+// tag::breakStatement[]
+breakStatement
+    : BREAK ";"
+    ;
+// end::breakStatement[]
+
+// tag::continueStatement[]
+continueStatement
+    : CONTINUE ";"
+    ;
+// end::continueStatement[]
+
 // To support direct invocation of a control or parser without instantiation
 // tag::directApplication[]
 directApplication
@@ -793,11 +824,11 @@ statement
     | emptyStatement
     | blockStatement
     | returnStatement
-    | exitStatement
     | breakStatement
     | continueStatement
+    | exitStatement
     | switchStatement
-    | loopStatement
+    | forStatement
     ;
 
 // tag::blockStatement[]
@@ -840,66 +871,6 @@ switchLabel
     ;
 // end::switchLabel[]
 
-// tag::loopStatement[]
-loopStatement
-    : optAnnotations FOR "(" optForInitStatements ";" expression ";"
-      optForUpdateStatements ")" statement
-    | optAnnotations FOR "(" typeRef name IN forCollectionExpr ")" statement
-    ;
-// end::loopStatement[]
-
-// tag::optForInitStatements[]
-optForInitStatements
-    : /* empty */
-    | forInitStatements
-    ;
-// end::optForInitStatements[]
-
-// tag::forInitStatements[]
-forInitStatements
-    : forInitStatement
-    | forInitStatements "," forInitStatement
-    ;
-// end::forInitStatements[]
-
-// tag::forInitStatement[]
-forInitStatement
-    : optAnnotations typeRef name optInitializer
-    | lvalue "(" argumentList ")"
-    | lvalue "<" typeArgumentList ">" "(" argumentList ")"
-    | lvalue "=" expression
-    ;
-// end::forInitStatement[]
-
-// tag::optForUpdateStatements[]
-optForUpdateStatements
-    : /* empty */
-    | forUpdateStatements
-    ;
-// end::optForUpdateStatements[]
-
-// tag::forUpdateStatements[]
-forUpdateStatements
-    : forUpdateStatement
-    | forUpdateStatements "," forUpdateStatement
-    ;
-// end::forUpdateStatements[]
-
-// tag::forUpdateStatement[]
-forUpdateStatement
-    : lvalue "(" argumentList ")"
-    | lvalue "<" typeArgumentList ">" "(" argumentList ")"
-    | lvalue "=" expression
-    ;
-// end::forUpdateStatement[]
-
-// tag::forCollectionExpr[]
-forCollectionExpr
-    : expression
-    | expression ".." erxpression
-    ;
-// end::forCollectionExpr[]
-
 // tag::statementOrDeclaration[]
 statementOrDeclaration
     : variableDeclaration
@@ -907,6 +878,57 @@ statementOrDeclaration
     | statement
     ;
 // end::statementOrDeclaration[]
+
+// tag::forStatement[]
+forStatement
+    : optAnnotations FOR "(" forInitStatements ";" expression ";"
+      forUpdateStatements ")" statement
+    | optAnnotations FOR "(" typeRef name IN forCollectionExpr ")" statement
+    | optAnnotations FOR "(" annotations typeRef name IN forCollectionExpr ")" statement
+    ;
+// end::forStatement[]
+
+// tag::forInitStatements[]
+forInitStatements
+    : /* empty */
+    | forInitStatementsNonEmpty
+    ;
+// end::forInitStatements[]
+
+// tag::forInitStatementsNonEmpty[]
+forInitStatementsNonEmpty
+    : declOrAssignmentOrMethodCallStatement
+    | forInitStatementsNonEmpty "," declOrAssignmentOrMethodCallStatement
+    ;
+// end::forInitStatementsNonEmpty[]
+
+// tag::declOrAssignmentOrMethodCallStatement[]
+declOrAssignmentOrMethodCallStatement
+    : variableDeclarationWithoutSemicolon
+    | assignmentOrMethodCallStatementWithoutSemicolon
+    ;
+// end::declOrAssignmentOrMethodCallStatement[]
+
+// tag::forUpdateStatements[]
+forUpdateStatements
+    : /* empty */
+    | forUpdateStatementsNonEmpty
+    ;
+// end::forUpdateStatements[]
+
+// tag::forUpdateStatementsNonEmpty[]
+forUpdateStatementsNonEmpty
+    : assignmentOrMethodCallStatementWithoutSemicolon
+    | forUpdateStatementsNonEmpty "," assignmentOrMethodCallStatementWithoutSemicolon
+    ;
+// end::forUpdateStatementsNonEmpty[]
+
+// tag::forCollectionExpr[]
+forCollectionExpr
+    : expression
+    | expression ".." expression
+    ;
+// end::forCollectionExpr[]
 
 /************************* TABLE *********************************/
 
@@ -990,8 +1012,12 @@ actionDeclaration
 
 // tag::variableDeclaration[]
 variableDeclaration
-    : annotations typeRef name optInitializer ";"
-    | typeRef name optInitializer ";"
+    : variableDeclarationWithoutSemicolon ";"
+    ;
+
+variableDeclarationWithoutSemicolon
+    : annotations typeRef name optInitializer
+    | typeRef name optInitializer
     ;
 // end::variableDeclaration[]
 
@@ -1054,13 +1080,6 @@ expressionList
     ;
 // end::expressionList[]
 
-// tag::structuredAnnotationBody[]
-structuredAnnotationBody
-    : expressionList optTrailingComma
-    | kvList optTrailingComma
-    ;
-// end::structuredAnnotationBody[]
-
 // tag::member[]
 member
     : name
@@ -1081,6 +1100,7 @@ lvalue
     | lvalue "." member
     | lvalue "[" expression "]"
     | lvalue "[" expression ":" expression "]"
+    | lvalue "[" expression "+" ":" expression "]"
     | "(" lvalue ")"
     ;
 // end::lvalue[]
@@ -1114,6 +1134,7 @@ expression
     | prefixedNonTypeName
     | expression "[" expression "]"
     | expression "[" expression ":" expression "]"
+    | expression "[" expression "+" ":" expression "]"
     | "{" expressionList optTrailingComma "}"
     | "{#}"
     | "{" kvList optTrailingComma "}"
@@ -1164,6 +1185,7 @@ nonBraceExpression
     | prefixedNonTypeName
     | nonBraceExpression "[" expression "]"
     | nonBraceExpression "[" expression ":" expression "]"
+    | nonBraceExpression "[" expression "+" ":" expression "]"
     | "(" expression ")"
     | "!" expression %prec PREFIX
     | "~" expression %prec PREFIX
